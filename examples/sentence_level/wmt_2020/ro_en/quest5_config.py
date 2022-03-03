@@ -8,7 +8,7 @@ RESULT_IMAGE = "result.jpg"
 GOOGLE_DRIVE = False
 DRIVE_FILE_ID = None
 MODEL_TYPE = "t5"
-MODEL_NAME = "mt5-base"
+MODEL_NAME = "google/mt5-base"
 
 quest5_config = {
     'output_dir': 'temp/outputs/',
