@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error
 
 from examples.sentence_level.wmt_2020.common.util.normalizer import fit
-from transquest.algo.sentence_level.monotransquest.evaluation import pearson_corr, spearman_corr, rmse
+from quest5.algo.evaluation import pearson_corr, spearman_corr, rmse
 
 
 def draw_scatterplot(data_frame, real_column, prediction_column, path, topic):
