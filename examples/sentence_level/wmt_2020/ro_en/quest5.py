@@ -66,6 +66,6 @@ dev['predictions'] = dev_preds.mean(axis=1)
 dev = dev[["original", "translation", "z_mean", "predictions"]]
 
 dev.to_csv(os.path.join(TEMP_DIRECTORY, RESULT_FILE), header=True, sep='\t', index=False, encoding='utf-8')
-draw_scatterplot(dev, 'labels', 'predictions', os.path.join(TEMP_DIRECTORY, RESULT_IMAGE), "Romanian-English")
+draw_scatterplot(dev, 'z_mean', 'predictions', os.path.join(TEMP_DIRECTORY, RESULT_IMAGE), "Romanian-English")
 print_stat(dev, 'z_mean', 'predictions')
 
