@@ -50,15 +50,15 @@ for i in range(quest5_config["n_fold"]):
     if os.path.exists(quest5_config['output_dir']) and os.path.isdir(
             quest5_config['output_dir']):
         shutil.rmtree(quest5_config['output_dir'])
-        model = QuEsT5Model(MODEL_TYPE, MODEL_NAME, args=quest5_config, use_multiprocessing=False)
-        train_df, eval_df = train_test_split(train, test_size=0.1, random_state=SEED * i)
-        model.train_model(train_df, eval_df=eval_df)
+    model = QuEsT5Model(MODEL_TYPE, MODEL_NAME, args=quest5_config, use_multiprocessing=False)
+    train_df, eval_df = train_test_split(train, test_size=0.1, random_state=SEED * i)
+    model.train_model(train_df, eval_df=eval_df)
 
-        model = QuEsT5Model(MODEL_TYPE, quest5_config["best_model_dir"],
+    model = QuEsT5Model(MODEL_TYPE, quest5_config["best_model_dir"],
                             use_cuda=torch.cuda.is_available(), args=quest5_config)
 
-        preds = model.predict(to_predict)
-        dev_preds[:, i] = [float(p) for p in preds[0]]
+    preds = model.predict(to_predict)
+    dev_preds[:, i] = [float(p) for p in preds[0]]
 
 
 dev['predictions'] = dev_preds.mean(axis=1)
