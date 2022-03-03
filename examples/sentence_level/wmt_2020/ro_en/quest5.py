@@ -6,11 +6,11 @@ import torch
 from sklearn.model_selection import train_test_split
 
 from examples.sentence_level.wmt_2020.common.util.draw import draw_scatterplot, print_stat
+from examples.sentence_level.wmt_2020.common.util.normalizer import fit, un_fit
 from examples.sentence_level.wmt_2020.common.util.reader import read_annotated_file, read_test_file
 from examples.sentence_level.wmt_2020.ro_en.quest5_config import quest5_config, MODEL_TYPE, MODEL_NAME, SEED, \
     TEMP_DIRECTORY, RESULT_FILE, RESULT_IMAGE
 from quest5.algo.run_model import QuEsT5Model
-
 
 if not os.path.exists(TEMP_DIRECTORY):
     os.makedirs(TEMP_DIRECTORY)
@@ -22,6 +22,8 @@ TEST_FILE = "examples/sentence_level/wmt_2020/ro_en/data/ro-en/test20.roen.df.sh
 train = read_annotated_file(TRAIN_FILE)
 dev = read_annotated_file(DEV_FILE)
 test = read_test_file(TEST_FILE)
+
+train = fit(train, 'z_mean')
 
 train = train[['original', 'translation', 'z_mean']]
 dev = dev[['original', 'translation', 'z_mean']]
@@ -55,17 +57,16 @@ for i in range(quest5_config["n_fold"]):
     model.train_model(train_data=train_df, eval_data=eval_df)
 
     model = QuEsT5Model(MODEL_TYPE, quest5_config["best_model_dir"],
-                            use_cuda=torch.cuda.is_available(), args=quest5_config)
+                        use_cuda=torch.cuda.is_available(), args=quest5_config)
 
     preds = model.predict(to_predict)
     dev_preds[:, i] = [float(p) for p in preds[0]]
 
-
 dev['predictions'] = dev_preds.mean(axis=1)
+dev = un_fit(dev, 'predictions')
 
 dev = dev[["original", "translation", "z_mean", "predictions"]]
 
 dev.to_csv(os.path.join(TEMP_DIRECTORY, RESULT_FILE), header=True, sep='\t', index=False, encoding='utf-8')
 draw_scatterplot(dev, 'z_mean', 'predictions', os.path.join(TEMP_DIRECTORY, RESULT_IMAGE), "Romanian-English")
 print_stat(dev, 'z_mean', 'predictions')
-
