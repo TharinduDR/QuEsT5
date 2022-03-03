@@ -23,8 +23,6 @@ train = read_annotated_file(TRAIN_FILE)
 dev = read_annotated_file(DEV_FILE)
 test = read_test_file(TEST_FILE)
 
-train = fit(train, 'z_mean')
-
 train = train[['original', 'translation', 'z_mean']]
 dev = dev[['original', 'translation', 'z_mean']]
 test = test[['index', 'original', 'translation']]
@@ -64,7 +62,6 @@ for i in range(quest5_config["n_fold"]):
     dev_preds[:, i] = [float(p) for p in preds]
 
 dev['predictions'] = dev_preds.mean(axis=1)
-dev = un_fit(dev, 'predictions')
 
 dev = dev[["original", "translation", "z_mean", "predictions"]]
 
