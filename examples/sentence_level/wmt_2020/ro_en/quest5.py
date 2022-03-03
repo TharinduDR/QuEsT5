@@ -11,6 +11,10 @@ from examples.sentence_level.wmt_2020.ro_en.quest5_config import quest5_config, 
     TEMP_DIRECTORY, RESULT_FILE, RESULT_IMAGE
 from quest5.algo.run_model import QuEsT5Model
 
+
+if not os.path.exists(TEMP_DIRECTORY):
+    os.makedirs(TEMP_DIRECTORY)
+
 TRAIN_FILE = "examples/sentence_level/wmt_2020/ro_en/data/ro-en/train.roen.df.short.tsv"
 DEV_FILE = "examples/sentence_level/wmt_2020/ro_en/data/ro-en/dev.roen.df.short.tsv"
 TEST_FILE = "examples/sentence_level/wmt_2020/ro_en/data/ro-en/test20.roen.df.short.tsv"
