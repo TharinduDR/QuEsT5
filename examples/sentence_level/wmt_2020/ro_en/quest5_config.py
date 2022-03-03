@@ -7,7 +7,7 @@ SUBMISSION_FILE = "predictions.txt"
 RESULT_IMAGE = "result.jpg"
 GOOGLE_DRIVE = False
 DRIVE_FILE_ID = None
-MODEL_TYPE = "t5"
+MODEL_TYPE = "mt5"
 MODEL_NAME = "google/mt5-base"
 
 quest5_config = {
