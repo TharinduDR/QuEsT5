@@ -8,7 +8,7 @@ RESULT_IMAGE = "result.jpg"
 GOOGLE_DRIVE = False
 DRIVE_FILE_ID = None
 MODEL_TYPE = "mt5"
-MODEL_NAME = "google/mt5-small"
+MODEL_NAME = "google/mt5-base"
 
 quest5_config = {
     'output_dir': 'temp/outputs/',
@@ -17,13 +17,13 @@ quest5_config = {
 
     'fp16': False,
     'fp16_opt_level': 'O1',
-    'max_seq_length': 512,
+    'max_seq_length': 256,
     'train_batch_size': 8,
     'gradient_accumulation_steps': 1,
     'eval_batch_size': 8,
-    'num_train_epochs': 3,
+    'num_train_epochs': 5,
     'weight_decay': 0,
-    'learning_rate': 0.001,
+    'learning_rate': 1e-5,
     'adam_epsilon': 1e-8,
     'warmup_ratio': 0.1,
     'warmup_steps': 0,
