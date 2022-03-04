@@ -60,7 +60,6 @@ for i in range(quest5_config["n_fold"]):
                         use_cuda=torch.cuda.is_available(), args=quest5_config)
 
     preds = model.predict(to_predict)
-    print(preds)
     dev_preds[:, i] = [float(p) for p in preds]
 
 dev['predictions'] = dev_preds.mean(axis=1)
