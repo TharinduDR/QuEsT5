@@ -1,5 +1,5 @@
 from sklearn import preprocessing
-min_max_scaler = preprocessing.MinMaxScaler()
+min_max_scaler = preprocessing.MinMaxScaler(feature_range=(0, 5))
 
 
 def fit(df, label):

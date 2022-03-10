@@ -32,7 +32,7 @@ test = test[['index', 'original', 'translation']]
 train["input_text"] = train.apply(lambda x: "sentence1: " + x["original"] + " sentence2: " + x["translation"], axis=1)
 dev["input_text"] = dev.apply(lambda x: "sentence1: " + x["original"] + " sentence2: " + x["translation"], axis=1)
 
-train["target_text"] = train["z_mean"].apply(lambda x: np.round(x, decimals=2)).astype(str)
+train["target_text"] = train["z_mean"].apply(lambda x: np.round(x, decimals=1)).astype(str)
 # dev["target_text"] = dev["z_mean"].apply(lambda x: np.round(x, decimals=2)).astype(str)
 
 train["prefix"] = "da"
