@@ -8,7 +8,8 @@ from dataclasses import asdict
 from multiprocessing import Pool, cpu_count
 from os import truncate
 from pathlib import Path
-
+import glob
+import shutil 
 import numpy as np
 import pandas as pd
 import torch
@@ -62,7 +63,7 @@ class QuEsT5Model:
         args=None,
         tokenizer=None,
         use_cuda=True,
-        cuda_device=-1,
+        cuda_device=0,
         **kwargs,
     ):
 
@@ -102,7 +103,8 @@ class QuEsT5Model:
 
         if use_cuda:
             if torch.cuda.is_available():
-                if cuda_device == -1:
+                if cuda_device == 0:
+                    print("CUDA DEVICE EQUAL TO 0")
                     self.device = torch.device("cuda")
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
@@ -477,11 +479,12 @@ class QuEsT5Model:
             training_progress_scores = self._create_training_progress_scores(**kwargs)
 
         if args.wandb_project:
-            wandb.init(
-                project=args.wandb_project,
-                config={**asdict(args), "repo": "simpletransformers"},
-                **args.wandb_kwargs,
-            )
+            wandb.init(project=args.wandb_project, config={**asdict(args)}, **args.wandb_kwargs)
+            # wandb.init(
+            #     project=args.wandb_project,
+            #     config={**asdict(args), "repo": "simpletransformers"},
+            #     **args.wandb_kwargs,
+            # )
             wandb.watch(self.model)
 
         if args.fp16:
@@ -579,9 +582,18 @@ class QuEsT5Model:
 
                     if args.save_steps > 0 and global_step % args.save_steps == 0:
                         # Save model checkpoint
-                        output_dir_current = os.path.join(
-                            output_dir, "checkpoint-{}".format(global_step)
-                        )
+                        # output_dir_current = os.path.join(
+                        #     output_dir, "checkpoint-{}".format(global_step)
+                        # )
+
+                        # self.save_model(
+                        #     output_dir_current, optimizer, scheduler, model=model
+                        # )
+                        if args.save_recent_only:
+                            del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
+                            for del_path in del_paths:
+                                shutil.rmtree(del_path)
+                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
 
                         self.save_model(
                             output_dir_current, optimizer, scheduler, model=model
@@ -602,10 +614,11 @@ class QuEsT5Model:
                             tb_writer.add_scalar(
                                 "eval_{}".format(key), value, global_step
                             )
-
-                        output_dir_current = os.path.join(
-                            output_dir, "checkpoint-{}".format(global_step)
-                        )
+                        if args.save_recent_only:
+                            del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
+                            for del_path in del_paths:
+                                shutil.rmtree(del_path)
+                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
 
                         if args.save_eval_checkpoints:
                             self.save_model(
@@ -731,9 +744,11 @@ class QuEsT5Model:
                         model.train()
 
             epoch_number += 1
-            output_dir_current = os.path.join(
-                output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
-            )
+            if args.save_recent_only:
+                del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
+                for del_path in del_paths:
+                    shutil.rmtree(del_path)
+            output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
 
             if args.save_model_every_epoch or args.evaluate_during_training:
                 os.makedirs(output_dir_current, exist_ok=True)

@@ -75,7 +75,10 @@ fabric.properties
 
 runs
 temp
-
+temp*
+temp/*
+temp/*/*
+wandb
 
 cache
 *.pyc

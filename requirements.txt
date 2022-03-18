@@ -3,6 +3,7 @@ markdown==2.6.8
 oauthlib==3.0.0
 pyasn1-modules==0.2.1
 numpy
+matplotlib
 requests
 tqdm>=4.47.0
 regex
@@ -14,6 +15,8 @@ seqeval
 tensorboardx
 pandas
 tokenizers
+torch
 wandb
 streamlit
 sentencepiece
+wandb==0.9.7

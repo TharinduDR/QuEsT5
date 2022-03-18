@@ -24,7 +24,7 @@ quest5_config = {
     'eval_batch_size': 4,
     'num_train_epochs': 5,
     'weight_decay': 0,
-    'learning_rate': 2e-4,
+    'learning_rate': 2e-5,
     'adam_epsilon': 1e-8,
     'warmup_ratio': 0.1,
     'warmup_steps': 0,
@@ -59,7 +59,7 @@ quest5_config = {
     "multiprocessing_chunksize": 500,
     'silent': False,
 
-    'wandb_project': "quest5-ro-en",
+    'wandb_project': "quest5-si-en",
     'wandb_kwargs': {},
 
     "use_early_stopping": True,
