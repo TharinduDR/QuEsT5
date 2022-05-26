@@ -28,8 +28,9 @@ from transformers.optimization import (
     get_polynomial_decay_schedule_with_warmup,
 )
 
-from ft5.args import T5Args
-from ft5.t5_utils import T5Dataset, load_hf_dataset, sweep_config_to_sweep_values
+from quest5.algo.model_args import QuEsT5Args
+from quest5.algo.utils import QuEsT5Dataset, load_hf_dataset, sweep_config_to_sweep_values
+
 
 try:
     import wandb
@@ -82,7 +83,7 @@ class QuEsT5Model:
 
         if isinstance(args, dict):
             self.args.update_from_dict(args)
-        elif isinstance(args, T5Args):
+        elif isinstance(args, QuEsT5Args):
             self.args = args
 
         if "sweep_config" in kwargs:
@@ -1187,7 +1188,7 @@ class QuEsT5Model:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return T5Dataset(
+            return QuEsT5Dataset(
                 tokenizer,
                 self.args,
                 data,
@@ -1241,7 +1242,7 @@ class QuEsT5Model:
         self.args.save(output_dir)
 
     def _load_model_args(self, input_dir):
-        args = T5Args()
+        args = QuEsT5Args()
         args.load(input_dir)
         return args
 
