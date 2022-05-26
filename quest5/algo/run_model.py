@@ -1,24 +1,24 @@
-import json
+import glob
 import logging
 import math
 import os
 import random
+import shutil
 import warnings
-from dataclasses import asdict
-from multiprocessing import Pool, cpu_count
-from os import truncate
-from pathlib import Path
-import glob
-import shutil 
+from multiprocessing import Pool
+
 import numpy as np
 import pandas as pd
 import torch
-from tensorboardX import SummaryWriter
+from dataclasses import asdict
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import DataLoader, Dataset, RandomSampler, SequentialSampler
-from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm, trange
+from transformers.models.byt5 import ByT5Tokenizer
+from transformers.models.mt5 import MT5Config, MT5ForConditionalGeneration
 from transformers.models.t5 import T5Config, T5ForConditionalGeneration, T5Tokenizer
+from transformers.optimization import AdamW, Adafactor
 from transformers.optimization import (
     get_constant_schedule,
     get_constant_schedule_with_warmup,
@@ -27,11 +27,9 @@ from transformers.optimization import (
     get_cosine_with_hard_restarts_schedule_with_warmup,
     get_polynomial_decay_schedule_with_warmup,
 )
-from transformers.optimization import AdamW, Adafactor
-from transformers.models.mt5 import MT5Config, MT5ForConditionalGeneration
 
-from quest5.algo.model_args import QuEsT5Args
-from quest5.algo.utils import load_hf_dataset, QuEsT5Dataset, sweep_config_to_sweep_values
+from ft5.args import T5Args
+from ft5.t5_utils import T5Dataset, load_hf_dataset, sweep_config_to_sweep_values
 
 try:
     import wandb
@@ -46,32 +44,33 @@ logger = logging.getLogger(__name__)
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+        yield lst[i: i + n]
 
 
 MODEL_CLASSES = {
     "t5": (T5Config, T5ForConditionalGeneration),
     "mt5": (MT5Config, MT5ForConditionalGeneration),
+    "byt5": (T5Config, T5ForConditionalGeneration),
 }
 
 
 class QuEsT5Model:
     def __init__(
-        self,
-        model_type,
-        model_name,
-        args=None,
-        tokenizer=None,
-        use_cuda=True,
-        cuda_device=0,
-        **kwargs,
+            self,
+            model_type,
+            model_name,
+            args=None,
+            tokenizer=None,
+            use_cuda=True,
+            cuda_device=-1,
+            **kwargs,
     ):
 
         """
         Initializes a T5Model model.
 
         Args:
-            model_type: The type of model (t5, mt5)
+            model_type: The type of model (t5, mt5, byt5)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
@@ -83,7 +82,7 @@ class QuEsT5Model:
 
         if isinstance(args, dict):
             self.args.update_from_dict(args)
-        elif isinstance(args, QuEsT5Args):
+        elif isinstance(args, T5Args):
             self.args = args
 
         if "sweep_config" in kwargs:
@@ -103,8 +102,7 @@ class QuEsT5Model:
 
         if use_cuda:
             if torch.cuda.is_available():
-                if cuda_device == 0:
-                    print("CUDA DEVICE EQUAL TO 0")
+                if cuda_device == -1:
                     self.device = torch.device("cuda")
                 else:
                     self.device = torch.device(f"cuda:{cuda_device}")
@@ -130,6 +128,8 @@ class QuEsT5Model:
         if isinstance(tokenizer, T5Tokenizer):
             self.tokenizer = tokenizer
             self.model.resize_token_embeddings(len(self.tokenizer))
+        elif model_type == "byt5":
+            self.tokenizer = ByT5Tokenizer.from_pretrained(model_name, truncate=True)
         else:
             self.tokenizer = T5Tokenizer.from_pretrained(model_name, truncate=True)
 
@@ -160,14 +160,14 @@ class QuEsT5Model:
             self.args.wandb_project = None
 
     def train_model(
-        self,
-        train_data,
-        output_dir=None,
-        show_running_loss=True,
-        args=None,
-        eval_data=None,
-        verbose=True,
-        **kwargs,
+            self,
+            train_data,
+            output_dir=None,
+            show_running_loss=True,
+            args=None,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
     ):
         """
         Trains the model using 'train_data'
@@ -206,9 +206,9 @@ class QuEsT5Model:
             output_dir = self.args.output_dir
 
         if (
-            os.path.exists(output_dir)
-            and os.listdir(output_dir)
-            and not self.args.overwrite_output_dir
+                os.path.exists(output_dir)
+                and os.listdir(output_dir)
+                and not self.args.overwrite_output_dir
         ):
             raise ValueError(
                 "Output directory ({}) already exists and is not empty."
@@ -242,13 +242,13 @@ class QuEsT5Model:
         return global_step, training_details
 
     def train(
-        self,
-        train_dataset,
-        output_dir,
-        show_running_loss=True,
-        eval_data=None,
-        verbose=True,
-        **kwargs,
+            self,
+            train_dataset,
+            output_dir,
+            show_running_loss=True,
+            eval_data=None,
+            verbose=True,
+            **kwargs,
     ):
         """
         Trains the model on train_dataset.
@@ -260,7 +260,7 @@ class QuEsT5Model:
         args = self.args
         device = self.device
 
-        tb_writer = SummaryWriter(logdir=args.tensorboard_dir)
+        tb_writer = SummaryWriter(log_dir=args.tensorboard_dir)
         train_sampler = RandomSampler(train_dataset)
         train_dataloader = DataLoader(
             train_dataset,
@@ -272,15 +272,15 @@ class QuEsT5Model:
         if args.max_steps > 0:
             t_total = args.max_steps
             args.num_train_epochs = (
-                args.max_steps
-                // (len(train_dataloader) // args.gradient_accumulation_steps)
-                + 1
+                    args.max_steps
+                    // (len(train_dataloader) // args.gradient_accumulation_steps)
+                    + 1
             )
         else:
             t_total = (
-                len(train_dataloader)
-                // args.gradient_accumulation_steps
-                * args.num_train_epochs
+                    len(train_dataloader)
+                    // args.gradient_accumulation_steps
+                    * args.num_train_epochs
             )
 
         no_decay = ["bias", "LayerNorm.weight"]
@@ -325,7 +325,7 @@ class QuEsT5Model:
                             p
                             for n, p in model.named_parameters()
                             if n not in custom_parameter_names
-                            and not any(nd in n for nd in no_decay)
+                               and not any(nd in n for nd in no_decay)
                         ],
                         "weight_decay": args.weight_decay,
                     },
@@ -334,7 +334,7 @@ class QuEsT5Model:
                             p
                             for n, p in model.named_parameters()
                             if n not in custom_parameter_names
-                            and any(nd in n for nd in no_decay)
+                               and any(nd in n for nd in no_decay)
                         ],
                         "weight_decay": 0.0,
                     },
@@ -365,7 +365,7 @@ class QuEsT5Model:
                 relative_step=args.adafactor_relative_step,
                 warmup_init=args.adafactor_warmup_init,
             )
-            print("Using Adafactor for T5")
+
         else:
             raise ValueError(
                 "{} is not a valid optimizer class. Please use one of ('AdamW', 'Adafactor') instead.".format(
@@ -417,9 +417,9 @@ class QuEsT5Model:
             raise ValueError("{} is not a valid scheduler.".format(args.scheduler))
 
         if (
-            args.model_name
-            and os.path.isfile(os.path.join(args.model_name, "optimizer.pt"))
-            and os.path.isfile(os.path.join(args.model_name, "scheduler.pt"))
+                args.model_name
+                and os.path.isfile(os.path.join(args.model_name, "optimizer.pt"))
+                and os.path.isfile(os.path.join(args.model_name, "scheduler.pt"))
         ):
             # Load in optimizer and scheduler states
             optimizer.load_state_dict(
@@ -457,10 +457,10 @@ class QuEsT5Model:
                     checkpoint_suffix = checkpoint_suffix[-1]
                 global_step = int(checkpoint_suffix)
                 epochs_trained = global_step // (
-                    len(train_dataloader) // args.gradient_accumulation_steps
+                        len(train_dataloader) // args.gradient_accumulation_steps
                 )
                 steps_trained_in_current_epoch = global_step % (
-                    len(train_dataloader) // args.gradient_accumulation_steps
+                        len(train_dataloader) // args.gradient_accumulation_steps
                 )
 
                 logger.info(
@@ -479,13 +479,14 @@ class QuEsT5Model:
             training_progress_scores = self._create_training_progress_scores(**kwargs)
 
         if args.wandb_project:
-            wandb.init(project=args.wandb_project, config={**asdict(args)}, **args.wandb_kwargs)
-            # wandb.init(
-            #     project=args.wandb_project,
-            #     config={**asdict(args), "repo": "simpletransformers"},
-            #     **args.wandb_kwargs,
-            # )
+            wandb.init(
+                project=args.wandb_project,
+                config={**asdict(args)},
+                **args.wandb_kwargs,
+            )
+            wandb.run._label(repo="simpletransformers")
             wandb.watch(self.model)
+            self.wandb_run_id = wandb.run.id
 
         if args.fp16:
             from torch.cuda import amp
@@ -581,27 +582,24 @@ class QuEsT5Model:
                             )
 
                     if args.save_steps > 0 and global_step % args.save_steps == 0:
-                        # Save model checkpoint
-                        # output_dir_current = os.path.join(
-                        #     output_dir, "checkpoint-{}".format(global_step)
-                        # )
 
-                        # self.save_model(
-                        #     output_dir_current, optimizer, scheduler, model=model
-                        # )
                         if args.save_recent_only:
                             del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
                             for del_path in del_paths:
                                 shutil.rmtree(del_path)
-                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
+
+                        # Save model checkpoint
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
 
                         self.save_model(
                             output_dir_current, optimizer, scheduler, model=model
                         )
 
                     if args.evaluate_during_training and (
-                        args.evaluate_during_training_steps > 0
-                        and global_step % args.evaluate_during_training_steps == 0
+                            args.evaluate_during_training_steps > 0
+                            and global_step % args.evaluate_during_training_steps == 0
                     ):
                         # Only evaluate when single GPU otherwise metrics may not average well
                         results = self.eval_model(
@@ -611,16 +609,24 @@ class QuEsT5Model:
                             **kwargs,
                         )
                         for key, value in results.items():
-                            tb_writer.add_scalar(
-                                "eval_{}".format(key), value, global_step
-                            )
-                        if args.save_recent_only:
-                            del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
-                            for del_path in del_paths:
-                                shutil.rmtree(del_path)
-                        output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
+                            try:
+                                tb_writer.add_scalar(
+                                    "eval_{}".format(key), value, global_step
+                                )
+                            except (NotImplementedError, AssertionError):
+                                pass
+
+                        output_dir_current = os.path.join(
+                            output_dir, "checkpoint-{}".format(global_step)
+                        )
 
                         if args.save_eval_checkpoints:
+
+                            if args.save_recent_only:
+                                del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
+                                for del_path in del_paths:
+                                    shutil.rmtree(del_path)
+
                             self.save_model(
                                 output_dir_current,
                                 optimizer,
@@ -655,8 +661,8 @@ class QuEsT5Model:
                             )
                         if best_eval_metric and args.early_stopping_metric_minimize:
                             if (
-                                results[args.early_stopping_metric] - best_eval_metric
-                                < args.early_stopping_delta
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    < args.early_stopping_delta
                             ):
                                 best_eval_metric = results[args.early_stopping_metric]
                                 self.save_model(
@@ -670,8 +676,8 @@ class QuEsT5Model:
                             else:
                                 if args.use_early_stopping:
                                     if (
-                                        early_stopping_counter
-                                        < args.early_stopping_patience
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
                                     ):
                                         early_stopping_counter += 1
                                         if verbose:
@@ -699,8 +705,8 @@ class QuEsT5Model:
                                         )
                         else:
                             if (
-                                results[args.early_stopping_metric] - best_eval_metric
-                                > args.early_stopping_delta
+                                    results[args.early_stopping_metric] - best_eval_metric
+                                    > args.early_stopping_delta
                             ):
                                 best_eval_metric = results[args.early_stopping_metric]
                                 self.save_model(
@@ -714,8 +720,8 @@ class QuEsT5Model:
                             else:
                                 if args.use_early_stopping:
                                     if (
-                                        early_stopping_counter
-                                        < args.early_stopping_patience
+                                            early_stopping_counter
+                                            < args.early_stopping_patience
                                     ):
                                         early_stopping_counter += 1
                                         if verbose:
@@ -744,11 +750,15 @@ class QuEsT5Model:
                         model.train()
 
             epoch_number += 1
+
             if args.save_recent_only:
                 del_paths = glob.glob(os.path.join(output_dir, 'checkpoint-*'))
                 for del_path in del_paths:
                     shutil.rmtree(del_path)
-            output_dir_current = os.path.join(output_dir, "checkpoint-{}".format(global_step))
+
+            output_dir_current = os.path.join(
+                output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
+            )
 
             if args.save_model_every_epoch or args.evaluate_during_training:
                 os.makedirs(output_dir_current, exist_ok=True)
@@ -793,8 +803,8 @@ class QuEsT5Model:
                     )
                 if best_eval_metric and args.early_stopping_metric_minimize:
                     if (
-                        results[args.early_stopping_metric] - best_eval_metric
-                        < args.early_stopping_delta
+                            results[args.early_stopping_metric] - best_eval_metric
+                            < args.early_stopping_delta
                     ):
                         best_eval_metric = results[args.early_stopping_metric]
                         self.save_model(
@@ -807,8 +817,8 @@ class QuEsT5Model:
                         early_stopping_counter = 0
                     else:
                         if (
-                            args.use_early_stopping
-                            and args.early_stopping_consider_epochs
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
                         ):
                             if early_stopping_counter < args.early_stopping_patience:
                                 early_stopping_counter += 1
@@ -837,8 +847,8 @@ class QuEsT5Model:
                                 )
                 else:
                     if (
-                        results[args.early_stopping_metric] - best_eval_metric
-                        > args.early_stopping_delta
+                            results[args.early_stopping_metric] - best_eval_metric
+                            > args.early_stopping_delta
                     ):
                         best_eval_metric = results[args.early_stopping_metric]
                         self.save_model(
@@ -851,8 +861,8 @@ class QuEsT5Model:
                         early_stopping_counter = 0
                     else:
                         if (
-                            args.use_early_stopping
-                            and args.early_stopping_consider_epochs
+                                args.use_early_stopping
+                                and args.early_stopping_consider_epochs
                         ):
                             if early_stopping_counter < args.early_stopping_patience:
                                 early_stopping_counter += 1
@@ -888,7 +898,7 @@ class QuEsT5Model:
         )
 
     def eval_model(
-        self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
+            self, eval_data, output_dir=None, verbose=True, silent=False, **kwargs
     ):
         """
         Evaluates the model on eval_data. Saves results to output_dir.
@@ -983,7 +993,7 @@ class QuEsT5Model:
             from torch.cuda import amp
 
         for batch in tqdm(
-            eval_dataloader, disable=args.silent or silent, desc="Running Evaluation"
+                eval_dataloader, disable=args.silent or silent, desc="Running Evaluation"
         ):
             inputs = self._get_inputs_dict(batch)
             with torch.no_grad():
@@ -1026,12 +1036,12 @@ class QuEsT5Model:
         all_outputs = []
         # Batching
         for batch in tqdm(
-            [
-                to_predict[i : i + self.args.eval_batch_size]
-                for i in range(0, len(to_predict), self.args.eval_batch_size)
-            ],
-            desc="Generating outputs",
-            disable=self.args.silent,
+                [
+                    to_predict[i: i + self.args.eval_batch_size]
+                    for i in range(0, len(to_predict), self.args.eval_batch_size)
+                ],
+                desc="Generating outputs",
+                disable=self.args.silent,
         ):
             input_batch = self.tokenizer.prepare_seq2seq_batch(
                 src_texts=batch,
@@ -1091,7 +1101,7 @@ class QuEsT5Model:
 
         if self.args.num_return_sequences > 1:
             return [
-                outputs[i : i + self.args.num_return_sequences]
+                outputs[i: i + self.args.num_return_sequences]
                 for i in range(0, len(outputs), self.args.num_return_sequences)
             ]
         else:
@@ -1151,7 +1161,7 @@ class QuEsT5Model:
             return inputs
 
     def load_and_cache_examples(
-        self, data, evaluate=False, no_cache=False, verbose=True, silent=False
+            self, data, evaluate=False, no_cache=False, verbose=True, silent=False
     ):
         """
         Creates a T5Dataset from data.
@@ -1177,7 +1187,12 @@ class QuEsT5Model:
             CustomDataset = args.dataset_class
             return CustomDataset(tokenizer, args, data, mode)
         else:
-            return QuEsT5Dataset(tokenizer, self.args, data, mode,)
+            return T5Dataset(
+                tokenizer,
+                self.args,
+                data,
+                mode,
+            )
 
     def _create_training_progress_scores(self, **kwargs):
         extra_metrics = {key: [] for key in kwargs}
@@ -1194,7 +1209,7 @@ class QuEsT5Model:
         return {metric: values[-1] for metric, values in metric_values.items()}
 
     def save_model(
-        self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
+            self, output_dir=None, optimizer=None, scheduler=None, model=None, results=None
     ):
         if not output_dir:
             output_dir = self.args.output_dir
@@ -1226,7 +1241,7 @@ class QuEsT5Model:
         self.args.save(output_dir)
 
     def _load_model_args(self, input_dir):
-        args = QuEsT5Args()
+        args = T5Args()
         args.load(input_dir)
         return args
 
