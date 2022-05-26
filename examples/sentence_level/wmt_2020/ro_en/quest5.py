@@ -84,7 +84,7 @@ for i in range(FOLDS):
     model.train_model(train_data=train_df, eval_data=eval_df)
 
     model = QuEsT5Model(model_type, model_args.best_model_dir,
-                        use_cuda=torch.cuda.is_available(), args=model_args, cuda_device=1)
+                        use_cuda=torch.cuda.is_available(), args=model_args, cuda_device=2)
 
     preds = model.predict(to_predict)
     dev_preds[:, i] = [float(p) for p in preds]
