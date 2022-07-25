@@ -35,8 +35,8 @@ dev["input_text"] = dev.apply(lambda x: "source: " + x["original"] + " target: "
 
 train["target_text"] = train["z_mean"].apply(lambda x: np.round(x, decimals=2)).astype(str)
 
-train["prefix"] = "da"
-dev["prefix"] = "da"
+train["prefix"] = ""
+dev["prefix"] = ""
 
 train = train[["prefix", "input_text", "target_text"]]
 
