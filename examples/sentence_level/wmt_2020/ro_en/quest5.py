@@ -1,17 +1,15 @@
+import math
 import os
-import shutil
 
 import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 
-from examples.sentence_level.wmt_2020.common.util.draw import draw_scatterplot, print_stat
+from examples.sentence_level.wmt_2020.common.util.draw import print_stat
 from examples.sentence_level.wmt_2020.common.util.normalizer import fit, un_fit
 from examples.sentence_level.wmt_2020.common.util.reader import read_annotated_file, read_test_file
 from quest5.algo.model_args import QuEsT5Args
 from quest5.algo.run_model import QuEsT5Model
-
-import math
 
 FOLDS = 5
 SEED = 777
@@ -47,9 +45,7 @@ to_predict = [
     for prefix, input_text in zip(dev["prefix"].tolist(), dev["input_text"].tolist())
 ]
 
-
 for i in range(FOLDS):
-
     model_args = QuEsT5Args()
     model_args.num_train_epochs = 20
     model_args.no_save = False
@@ -93,6 +89,5 @@ dev['predictions'] = dev_preds.mean(axis=1)
 dev = un_fit(dev, 'predictions')
 
 dev = dev[["original", "translation", "z_mean", "predictions"]]
-
 
 print_stat(dev, 'z_mean', 'predictions')
