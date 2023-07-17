@@ -1,4 +1,4 @@
-from sentence_transformers.evaluation import SentenceEvaluator
+from . import SentenceEvaluator
 from sentence_transformers.util import batch_to_device
 from sentence_transformers import SentenceTransformer
 from typing import List, Tuple, Dict

@@ -1,10 +1,11 @@
-from sentence_transformers.evaluation import SentenceEvaluator
+
 import numpy as np
 import logging
 import os
 import csv
 from typing import List
 
+from . import SentenceEvaluator
 
 logger = logging.getLogger(__name__)
 
