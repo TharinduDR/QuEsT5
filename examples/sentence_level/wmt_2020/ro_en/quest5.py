@@ -23,7 +23,7 @@ dev = fit(dev, 'score')
 
 train = train[['original', 'translation', 'score']]
 dev = dev[['original', 'translation', 'score']]
-test = test[['index', 'original', 'score']]
+
 
 dev_sentence_pairs = list(map(list, zip(dev['original'].to_list(), dev['translation'].to_list())))
 
