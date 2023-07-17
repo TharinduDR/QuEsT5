@@ -1,9 +1,4 @@
-import math
-import os
-import shutil
 
-import numpy as np
-import torch
 from sklearn.model_selection import train_test_split
 
 from examples.sentence_level.wmt_2020.common.util.draw import print_stat
@@ -24,7 +19,7 @@ dev = read_annotated_file(DEV_FILE)
 test = read_test_file(TEST_FILE)
 
 train = fit(train, 'score')
-dev = dev(train, 'score')
+dev = fit(dev, 'score')
 
 train = train[['original', 'translation', 'score']]
 dev = dev[['original', 'translation', 'score']]
@@ -43,7 +38,7 @@ model_args.best_model_dir = "outputs/best_model"
 #             model_args.best_model_dir):
 #         shutil.rmtree(model_args.best_model_dir)
 
-train_df, eval_df = train_test_split(train, test_size=0.1, random_state=SEED * i)
+train_df, eval_df = train_test_split(train, test_size=0.1, random_state=model_args.manual_seed)
 model = QuEsT5Model("google/mt5-base", args=model_args)
 model.train_model(train_df, eval_df)
 
