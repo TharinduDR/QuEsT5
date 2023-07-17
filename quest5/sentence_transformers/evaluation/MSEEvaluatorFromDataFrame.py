@@ -1,11 +1,12 @@
 from . import SentenceEvaluator
-from ..SentenceTransformer import SentenceTransformer
+
 from typing import List, Tuple, Dict
-import torch
 import numpy as np
 import logging
 import os
 import csv
+
+from quest5.sentence_transformers import SentenceTransformer
 
 
 logger = logging.getLogger(__name__)
