@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
-    name="transquest",
+    name="quest5",
     version="0.0.1",
     author="Tharindu Ranasinghe",
     author_email="rhtdranasinghe@gmail.com",
     description="Translation Quality Estimation with T5 ",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/TharinduDR/TransQuest",
+    url="https://github.com/TharinduDR/QuesT5",
     packages=find_packages(exclude=("examples", "docs", )),
     classifiers=[
         "Intended Audience :: Science/Research",
