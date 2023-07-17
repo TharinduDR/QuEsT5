@@ -20,7 +20,7 @@ def read_annotated_file(path, index="index"):
         {'index': indices,
          'original': originals,
          'translation': translations,
-         'z_mean': z_means
+         'score': z_means
          })
 
 
