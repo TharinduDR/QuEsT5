@@ -75,13 +75,15 @@ class QuEsT5Model:
         self.model.fit(train_objectives=[(train_dataloader, train_loss)],
                        evaluator=evaluator,
                        epochs=self.args.num_train_epochs,
-                       evaluation_steps=self.args.evaluate_during_training_steps,
+                       evaluation_steps=self.args.evaluation_steps,
                        optimizer_params={'lr': self.args.learning_rate,
                                          'eps': self.args.adam_epsilon},
                        warmup_steps=warmup_steps,
                        weight_decay=self.args.weight_decay,
                        max_grad_norm=self.args.max_grad_norm,
-                       output_path=self.args.best_model_dir)
+                       output_path=self.args.best_model_dir,
+                       checkpoint_save_steps=self.args.checkpoint_save_steps,
+                       checkpoint_save_total_limit=self.args.checkpoint_save_total_limit)
 
         self.save_model_args(self.args.best_model_dir)
 

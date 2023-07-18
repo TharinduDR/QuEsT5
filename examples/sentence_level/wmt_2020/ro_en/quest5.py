@@ -30,7 +30,8 @@ dev_sentence_pairs = list(map(list, zip(dev['original'].to_list(), dev['translat
 model_args = QuEsT5Args()
 model_args.learning_rate = 1e-4
 model_args.manual_seed = 777
-model_args.num_train_epochs = 5
+model_args.num_train_epochs = 6
+model_args.evaluation_steps = 100
 model_args.best_model_dir = "outputs/best_model"
 
 # for i in range(5):
@@ -39,7 +40,7 @@ model_args.best_model_dir = "outputs/best_model"
 #         shutil.rmtree(model_args.best_model_dir)
 
 train_df, eval_df = train_test_split(train, test_size=0.1, random_state=model_args.manual_seed)
-model = QuEsT5Model("google/mt5-base", args=model_args)
+model = QuEsT5Model("google/mt5-large", args=model_args)
 model.train_model(train_df, eval_df)
 
 model = QuEsT5Model(model_args.best_model_dir)

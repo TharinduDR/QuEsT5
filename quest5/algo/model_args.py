@@ -1,10 +1,8 @@
 import json
 import os
 import sys
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field
 from multiprocessing import cpu_count
-
-from torch.utils.data import Dataset
 
 
 def get_default_process_count():
@@ -21,14 +19,17 @@ def get_special_tokens():
 
 @dataclass
 class QuEsT5Args:
-
     adam_epsilon: float = 1e-8
     best_model_dir: str = "outputs/best_model"
-    evaluate_during_training_steps: int = 2000
-    learning_rate: float = 4e-5
+    checkpoint_path: str = "outputs/checkpoints"
+    checkpoint_save_steps = 100
+    checkpoint_save_total_limit = 1
+    evaluation_steps: int = 100
+    learning_rate: float = 1e-4
     manual_seed: int = None
     max_grad_norm: float = 1.0
     n_gpu: int = 1
+    not_saved_args: list = field(default_factory=list)
     num_train_epochs: int = 1
     thread_count: int = None
     train_batch_size: int = 8
@@ -54,7 +55,7 @@ class QuEsT5Args:
         with open(os.path.join(output_dir, "model_args.json"), "w") as f:
             args_dict = self.get_args_for_saving()
             if args_dict["tokenizer_type"] is not None and not isinstance(
-                args_dict["tokenizer_type"], str
+                    args_dict["tokenizer_type"], str
             ):
                 args_dict["tokenizer_type"] = type(args_dict["tokenizer_type"]).__name__
             json.dump(args_dict, f)
