@@ -54,10 +54,6 @@ class QuEsT5Args:
         os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, "model_args.json"), "w") as f:
             args_dict = self.get_args_for_saving()
-            if args_dict["tokenizer_type"] is not None and not isinstance(
-                    args_dict["tokenizer_type"], str
-            ):
-                args_dict["tokenizer_type"] = type(args_dict["tokenizer_type"]).__name__
             json.dump(args_dict, f)
 
     def load(self, input_dir):
