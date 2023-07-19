@@ -41,7 +41,7 @@ model_args.best_model_dir = "outputs/best_model"
 #         shutil.rmtree(model_args.best_model_dir)
 
 train_df, eval_df = train_test_split(train, test_size=0.1, random_state=model_args.manual_seed)
-model = QuEsT5Model("google/mt5-large", args=model_args)
+model = QuEsT5Model("google/mt5-xl", args=model_args)
 model.train_model(train_df, eval_df)
 
 model = QuEsT5Model(model_args.best_model_dir)

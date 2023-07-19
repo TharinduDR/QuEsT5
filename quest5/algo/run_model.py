@@ -11,6 +11,7 @@ from quest5.sentence_transformers import SentenceTransformer, InputExample
 from quest5.sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 from quest5.sentence_transformers.losses import ContrastiveLoss
 from quest5.sentence_transformers.models import Transformer, Pooling
+from sentence_transformers.losses import ContrastiveTensionLoss
 
 
 class QuEsT5Model:
@@ -27,7 +28,6 @@ class QuEsT5Model:
         Initializes a QuEsT5Model model.
 
         Args:
-            model_type: The type of model (t5, mt5, byt5)
             model_name: The exact architecture and trained weights to use. This may be a Hugging Face Transformers compatible pre-trained model, a community model, or the path to a directory containing model files.
             args (optional): Default args will be used if this parameter is not provided. If provided, it should be a dict containing the args that should be changed in the default args.
             use_cuda (optional): Use GPU if available. Setting to False will force model to use CPU only.
@@ -76,7 +76,7 @@ class QuEsT5Model:
 
         train_dataloader = DataLoader(train_samples, shuffle=True,
                                       batch_size=self.args.train_batch_size)
-        train_loss = ContrastiveLoss(model=self.model)
+        train_loss = ContrastiveTensionLoss(model=self.model)
 
         evaluator = EmbeddingSimilarityEvaluator.from_input_examples(eval_samples, name='eval')
         warmup_steps = math.ceil(len(train_dataloader) * self.args.num_train_epochs * 0.1)

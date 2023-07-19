@@ -23,7 +23,7 @@ class QuEsT5Args:
     best_model_dir: str = "outputs/best_model"
     checkpoint_path: str = "outputs/checkpoints"
     checkpoint_save_steps = 100
-    checkpoint_save_total_limit = 1
+    checkpoint_save_total_limit = 2
     evaluation_steps: int = 100
     learning_rate: float = 1e-4
     manual_seed: int = None
