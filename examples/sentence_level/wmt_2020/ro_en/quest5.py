@@ -30,7 +30,7 @@ dev_sentence_pairs = list(map(list, zip(dev['original'].to_list(), dev['translat
 model_args = QuEsT5Args()
 model_args.learning_rate = 1e-4
 model_args.manual_seed = 777
-model_args.num_train_epochs = 6
+model_args.num_train_epochs = 3
 model_args.evaluation_steps = 100
 model_args.best_model_dir = "outputs/best_model"
 
