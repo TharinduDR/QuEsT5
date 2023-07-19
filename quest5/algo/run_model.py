@@ -10,7 +10,7 @@ from quest5.algo.model_args import QuEsT5Args
 from quest5.sentence_transformers import SentenceTransformer, InputExample
 from quest5.sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 from quest5.sentence_transformers.losses import ContrastiveLoss
-from sentence_transformers.models import Transformer, Pooling
+from quest5.sentence_transformers.models import Transformer, Pooling
 
 
 class QuEsT5Model:
