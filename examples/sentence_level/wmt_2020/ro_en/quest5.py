@@ -47,7 +47,7 @@ model = QuEsT5Model(model_args.best_model_dir)
 dev_preds = model.predict(dev_sentence_pairs)
 
 dev['predictions'] = dev_preds
-dev = un_fit(dev, 'labels')
+dev = un_fit(dev, 'score')
 dev = un_fit(dev, 'predictions')
 
-print_stat(dev, 'labels', 'predictions')
+print_stat(dev, 'score', 'predictions')
