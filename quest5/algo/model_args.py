@@ -28,6 +28,7 @@ class QuEsT5Args:
     learning_rate: float = 1e-4
     manual_seed: int = None
     max_grad_norm: float = 1.0
+    max_seq_length: int = 256
     n_gpu: int = 1
     not_saved_args: list = field(default_factory=list)
     num_train_epochs: int = 1

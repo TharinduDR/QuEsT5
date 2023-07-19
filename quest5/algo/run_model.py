@@ -10,6 +10,7 @@ from quest5.algo.model_args import QuEsT5Args
 from quest5.sentence_transformers import SentenceTransformer, InputExample
 from quest5.sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 from quest5.sentence_transformers.losses import ContrastiveLoss
+from sentence_transformers.models import Transformer, Pooling
 
 
 class QuEsT5Model:
@@ -33,13 +34,21 @@ class QuEsT5Model:
             cuda_device (optional): Specific GPU that should be used. Will use the first available GPU by default.
             **kwargs (optional): For providing proxies, force_download, resume_download, cache_dir and other options specific to the 'from_pretrained' implementation where this will be supplied.
         """
-        self.model = SentenceTransformer(model_name)
+
+        # self.model = SentenceTransformer(model_name)
         self.args = self.load_model_args(model_name)
 
         if isinstance(args, dict):
             self.args.update_from_dict(args)
         elif isinstance(args, QuEsT5Args):
             self.args = args
+
+        transformer_model = Transformer(model_name, max_seq_length=self.args.max_seq_length)
+        pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), pooling_mode_mean_tokens=True,
+                                pooling_mode_cls_token=False,
+                                pooling_mode_max_tokens=False)
+        modules = [transformer_model, pooling_model]
+        self.model = SentenceTransformer(modules=modules)
 
         if self.args.thread_count:
             torch.set_num_threads(self.args.thread_count)
