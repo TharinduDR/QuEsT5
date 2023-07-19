@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 from quest5.algo.model_args import QuEsT5Args
 from quest5.sentence_transformers import SentenceTransformer, InputExample
 from quest5.sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
-from quest5.sentence_transformers.losses import ContrastiveLoss
+from quest5.sentence_transformers.losses import ContrastiveLoss, ContrastiveTensionLoss
 from quest5.sentence_transformers.models import Transformer, Pooling
-from sentence_transformers.losses import ContrastiveTensionLoss
+
 
 
 class QuEsT5Model:
